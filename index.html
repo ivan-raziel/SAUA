@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alumnos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        #container {
+            max-width: 800px;
+            margin: 20px;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            opacity: 0;
+            animation: fadeIn 1s forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        th:first-child,
+        td:first-child {
+            border-left: none;
+        }
+
+        th:last-child,
+        td:last-child {
+            border-right: none;
+        }
+
+        tbody tr:hover {
+            background-color: #f2f2f2;
+        }
+
+        .btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            padding: 5px 10px;
+            font-size: 14px;
+        }
+
+        .btn:hover {
+            background-color: #2980b9;
+        }
+
+        .delete-btn {
+            background-color: #e74c3c;
+        }
+
+        .delete-btn:hover {
+            background-color: #c0392b;
+        }
+
+        .edit-form {
+            display: none;
+            flex-direction: column;
+            margin-top: 20px;
+        }
+
+        .edit-form label, .edit-form input {
+            margin-bottom: 10px;
+        }
+
+        .page-link {
+            display: block;
+            margin-bottom: 20px;
+            font-size: 18px;
+            text-align: center;
+            color: #3498db;
+            text-decoration: none;
+        }
+
+        .page-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <a class="page-link" href="agregar-alumno.html">Agregar Alumno</a>
+        <h1>Lista de Alumnos</h1>
+        <table id="alumnos-table">
+            <thead>
+                <tr>
+                    <th>Matrícula</th>
+                    <th>Nombre</th>
+                    <th>Apellidos</th>
+                    <th>Grupo</th>
+                    <th>Semestre</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Aquí se mostrarán los datos de los alumnos -->
+            </tbody>
+        </table>
+
+        <!-- Formulario de edición -->
+        <form id="edit-form" class="edit-form">
+            <h2>Editar Alumno</h2>
+            <label for="edit-matricula">Matrícula:</label>
+            <input type="text" id="edit-matricula" name="edit-matricula" required>
+            <label for="edit-nombre">Nombre:</label>
+            <input type="text" id="edit-nombre" name="edit-nombre" required>
+            <label for="edit-apellidos">Apellidos:</label>
+            <input type="text" id="edit-apellidos" name="edit-apellidos" required>
+            <label for="edit-grupo">Grupo:</label>
+            <input type="text" id="edit-grupo" name="edit-grupo" required>
+            <label for="edit-semestre">Semestre:</label>
+            <input type="number" id="edit-semestre" name="edit-semestre" required>
+            <button type="submit" class="btn">Guardar</button>
+            <button type="button" id="cancel-edit" class="btn">Cancelar</button>
+        </form>
+    </div>
+
+    <script type="module">
+        // Importa las funciones necesarias de Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.4.0/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.4.0/firebase-firestore.js";
+
+        // Configuración de Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyAzpDwn_0wog-3-T4j9IIMGr1HslaqW6wY",
+            authDomain: "saua-4afd6.firebaseapp.com",
+            projectId: "saua-4afd6",
+            storageBucket: "saua-4afd6.appspot.com",
+            messagingSenderId: "1070013754193",
+            appId: "1:1070013754193:web:b61bed772d65d800d3c170",
+            measurementId: "G-RC3LT7H716"
+        };
+
+        // Inicializar Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Obtener la referencia a la tabla de alumnos
+        const tableBody = document.querySelector('#alumnos-table tbody');
+        const editForm = document.getElementById('edit-form');
+        const cancelEditBtn = document.getElementById('cancel-edit');
+
+        let currentDocId = null;
+
+        // Función para mostrar los datos de los alumnos en la tabla
+        function mostrarAlumnos(querySnapshot) {
+            tableBody.innerHTML = ''; // Limpiar la tabla antes de llenarla
+            querySnapshot.forEach(docSnapshot => {
+                const alumno = docSnapshot.data();
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${alumno.matricula}</td>
+                    <td>${alumno.nombre}</td>
+                    <td>${alumno.apellidos}</td>
+                    <td>${alumno.grupo}</td>
+                    <td>${alumno.semestre}</td>
+                    <td>
+                        <button class="btn edit-btn" data-id="${docSnapshot.id}">Editar</button>
+                        <button class="btn delete-btn" data-id="${docSnapshot.id}">Eliminar</button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+            // Añadir evento de clic a todos los botones de eliminación
+            const deleteButtons = document.querySelectorAll('.delete-btn');
+            deleteButtons.forEach(button => {
+                button.addEventListener('click', async (e) => {
+                    const id = e.target.getAttribute('data-id');
+                    const confirmation = confirm('¿Seguro que quieres eliminar el alumno?');
+                    if (confirmation) {
+                        try {
+                            await deleteDoc(doc(db, 'Alumnos', id));
+                        } catch (error) {
+                            console.error("Error al eliminar el alumno: ", error);
+                        }
+                    }
+                });
+            });
+
+            // Añadir evento de clic a todos los botones de edición
+            const editButtons = document.querySelectorAll('.edit-btn');
+            editButtons.forEach(button => {
+                button.addEventListener('click', (e) => {
+                    currentDocId = e.target.getAttribute('data-id');
+                    const row = e.target.parentElement.parentElement;
+                    document.getElementById('edit-matricula').value = row.cells[0].innerText;
+                    document.getElementById('edit-nombre').value = row.cells[1].innerText;
+                    document.getElementById('edit-apellidos').value = row.cells[2].innerText;
+                    document.getElementById('edit-grupo').value = row.cells[3].innerText;
+                    document.getElementById('edit-semestre').value = row.cells[4].innerText;
+                    editForm.style.display = 'flex';
+                });
+            });
+        }
+
+        // Función para ocultar el formulario de edición
+        function hideEditForm() {
+            editForm.style.display = 'none';
+            currentDocId = null;
+        }
+
+        // Evento para cancelar la edición
+        cancelEditBtn.addEventListener('click', hideEditForm);
+
+        // Evento para guardar la edición
+        editForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (!currentDocId) return;
+
+            const updatedData = {
+                matricula: document.getElementById('edit-matricula').value,
+                nombre: document.getElementById('edit-nombre').value,
+                apellidos: document.getElementById('edit-apellidos').value,
+                grupo: document.getElementById('edit-grupo').value,
+                semestre: parseInt(document.getElementById('edit-semestre').value),
+            };
+
+            try {
+                await updateDoc(doc(db, 'Alumnos', currentDocId), updatedData);
+                hideEditForm();  // Ocultar el formulario de edición
+            } catch (error) {
+                console.error("Error al actualizar el alumno: ", error);
+            }
+        });
+
+        // Usar onSnapshot para escuchar los cambios en tiempo real en la colección 'Alumnos'
+        onSnapshot(collection(db, 'Alumnos'), (querySnapshot) => {
+            mostrarAlumnos(querySnapshot);
+        });
+    </script>
+</body>
+</html>

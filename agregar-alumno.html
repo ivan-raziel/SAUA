@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agregar Alumno</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f0f0;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            animation: fadeIn 1s ease-in-out;
+        }
+
+        h1 {
+            text-align: center;
+            color: #004b97;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            margin: 10px 0 5px;
+        }
+
+        input {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 10px;
+            background-color: #004b97;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #003366;
+        }
+
+        .error {
+            color: red;
+            margin-top: 10px;
+            display: none;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html">Alumnos</a>
+        <h1>Agregar Alumno</h1>
+        <form id="agregar-alumno-form">
+            <label for="matricula">Matrícula:</label>
+            <input type="text" id="matricula" name="matricula" required>
+
+            <label for="nombre">Nombre:</label>
+            <input type="text" id="nombre" name="nombre" required>
+
+            <label for="apellidos">Apellidos:</label>
+            <input type="text" id="apellidos" name="apellidos" required>
+
+            <label for="grupo">Grupo:</label>
+            <input type="text" id="grupo" name="grupo" required>
+
+            <label for="semestre">Semestre:</label>
+            <input type="number" id="semestre" name="semestre" required>
+
+            <button type="submit">Agregar</button>
+            <p class="error" id="error-message">Matrícula existente</p>
+        </form>
+    </div>
+
+    <script type="module">
+        // Importa las funciones necesarias de Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.4.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.4.0/firebase-firestore.js";
+
+        // Configuración de Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyAzpDwn_0wog-3-T4j9IIMGr1HslaqW6wY",
+            authDomain: "saua-4afd6.firebaseapp.com",
+            projectId: "saua-4afd6",
+            storageBucket: "saua-4afd6.appspot.com",
+            messagingSenderId: "1070013754193",
+            appId: "1:1070013754193:web:b61bed772d65d800d3c170",
+            measurementId: "G-RC3LT7H716"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Agrega un evento para manejar el envío del formulario
+        const form = document.getElementById('agregar-alumno-form');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault(); // Evita que se recargue la página al enviar el formulario
+
+            // Recopila los valores del formulario
+            const matricula = form.matricula.value;
+            const nombre = form.nombre.value;
+            const apellidos = form.apellidos.value;
+            const grupo = form.grupo.value;
+            const semestre = parseInt(form.semestre.value);
+
+            // Verifica si la matrícula ya existe
+            const matriculaQuery = query(collection(db, 'Alumnos'), where('matricula', '==', matricula));
+            const querySnapshot = await getDocs(matriculaQuery);
+
+            if (!querySnapshot.empty) {
+                // Si la matrícula ya existe, muestra el mensaje de error
+                document.getElementById('error-message').style.display = 'block';
+            } else {
+                try {
+                    // Agrega los datos a la base de datos
+                    await addDoc(collection(db, 'Alumnos'), {
+                        matricula,
+                        nombre,
+                        apellidos,
+                        grupo,
+                        semestre
+                    });
+                    console.log("Alumno agregado correctamente.");
+                    // Limpia el formulario y oculta el mensaje de error
+                    form.reset();
+                    document.getElementById('error-message').style.display = 'none';
+                } catch (error) {
+                    console.error("Error al agregar alumno: ", error);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
